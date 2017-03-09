@@ -339,5 +339,5 @@ function parse_major_minor_version(pkg_version)
     assert(type(pkg_version) == "table")
 
     local ver_tab = pkg_version[1]
-    return ver_tab[1] .. "." .. ver_tab[2]
+    return (ver_tab[1] or "0") .. "." .. (ver_tab[2] or "0")
 end
