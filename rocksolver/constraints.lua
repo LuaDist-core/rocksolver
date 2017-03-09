@@ -330,3 +330,14 @@ function split(name)
     end
     return name, nil
 end
+
+-- Parses major and minor versions of package version, e.g. for package in version
+-- '1.2.6-1' will major and minor version be 1.2.
+-- @param version table created by function 'parseVersion'.
+-- @return string: major and minor version separated by '.'
+function parse_major_minor_version(pkg_version)
+    assert(type(pkg_version) == "table")
+
+    local ver_tab = pkg_version[1]
+    return (ver_tab[1] or "0") .. "." .. (ver_tab[2] or "0")
+end
