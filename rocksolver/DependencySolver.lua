@@ -6,6 +6,8 @@
 local const = require("rocksolver.constraints")
 local utils = require("rocksolver.utils")
 local Package = require("rocksolver.Package")
+local mgr = require "dist.manager"
+local log = require "dist.log".logger
 
 
 local DependencySolver = {}
@@ -109,6 +111,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
 
     -- Get package candidates
     local candidates = self:find_candidates(package)
+
     if #candidates == 0 then
         return nil, "No suitable candidate for package \"" .. package .. "\" found."
     end
@@ -123,6 +126,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
         print('      to_install: ', utils.table_tostring(to_install))
         print('      dependencies: ', utils.table_tostring(pkg:dependencies(self.platform)))
         print('  -is installed: ', self:is_installed(pkg.name, tmp_installed, pkg_const))
+        print('')
         -- ]]
 
         -- Clear state from previous iteration
@@ -130,8 +134,49 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
 
         -- Check if it was already added by previous candidate
         pkg_installed, err = self:is_installed(pkg.name, tmp_installed, pkg_const)
+
         if pkg_installed then
-            break
+            -- Get last candidate of currently resolved package to check if it's binary candidate
+            if not tmp_installed[#tmp_installed].version.hash then
+                break
+            else
+                local bin_candidate = tmp_installed[#tmp_installed]
+
+                -- Generate hash from dependencies of binary candidate
+                local required_pkg_hash = mgr.generate_dep_hash(bin_candidate:dependencies(self.platform), tmp_installed)
+
+                -- If candidate contains hash (is binary package), but was built with other dependencies or on other platform
+                if bin_candidate.version.hash ~= required_pkg_hash then
+                    log:info("Binary candidate ".. bin_candidate.version.hash .." is not suitable.")
+
+                    -- Collect installed packages purged from not suitable bin candidate and it's dependencies selected to be installed
+                    local cleaned_installed = {}
+
+                    -- Mark packages to be deleted from tmp_installed
+                    for _ , dep_to_install in pairs(to_install) do
+                        for i , inst in pairs(tmp_installed) do
+
+                            -- Mark package to be deleted from list of installed packages
+                            if inst == dep_to_install then tmp_installed[i].to_delete = true end
+                        end
+                    end
+
+                    for i, tmp_installed_pkg in pairs(tmp_installed) do
+                        if not tmp_installed_pkg.to_delete then
+                            table.insert(cleaned_installed, tmp_installed[i])
+                        end
+                    end
+
+                    tmp_installed = utils.deepcopy(cleaned_installed)
+                    installed = utils.deepcopy(cleaned_installed)
+                    to_install = {}
+
+                -- Binary candidate is compatible and suitable to be installed
+                elseif bin_candidate.version.hash == required_pkg_hash then
+                    log:info("Binary candidate ".. bin_candidate.version.hash .." is suitable.")
+                    break
+                end
+            end
         end
 
         -- Maybe check for conflicting packages here if we will support that functionallity
