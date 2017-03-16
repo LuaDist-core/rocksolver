@@ -147,10 +147,14 @@ function parseVersion(vstring)
         vstring = vstring:match("^%s*(.*)%s*$")
         version.string = vstring
         -- store revision separately if any
-        local main, revision = vstring:match("(.*)%-(%d+)$")
+        local main, revision, hash = vstring:match("(.*)%-(%d+)%_*(%x*)$")
         if revision then
             vstring = main
             version.revision = tonumber(revision)
+        end
+        if hash and hash ~= "" then
+            -- version.string = version.string:gsub("_"..hash, "")
+            version.hash = hash
         end
         local number
         while #vstring > 0 do
@@ -340,4 +344,13 @@ function parse_major_minor_version(pkg_version)
 
     local ver_tab = pkg_version[1]
     return (ver_tab[1] or "0") .. "." .. (ver_tab[2] or "0")
+end
+
+function splitVersionAndHash(version)
+    local hash = string.find(version, "%_+")
+    if hash then
+        return string.sub(version, 0, hash-1), string.sub(version, hash + 1)
+    else
+        return version ,nil
+    end
 end
