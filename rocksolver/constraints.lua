@@ -93,9 +93,14 @@ local version_mt = {
                 end
             end
         end
+
         if v1.revision and v2.revision then
             return (v1.revision < v2.revision)
+
+        if not v1.revision and v2.revision then
+            return true
         end
+
         return false
     end,
 

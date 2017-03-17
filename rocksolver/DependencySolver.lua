@@ -7,7 +7,6 @@ local const = require("rocksolver.constraints")
 local utils = require("rocksolver.utils")
 local Package = require("rocksolver.Package")
 local mgr = require "dist.manager"
-local log = require "dist.log".logger
 
 
 local DependencySolver = {}
@@ -147,7 +146,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
 
                 -- If candidate contains hash (is binary package), but was built with other dependencies or on other platform
                 if bin_candidate.version.hash ~= required_pkg_hash then
-                    log:info("Binary candidate ".. bin_candidate.version.hash .." is not suitable.")
+                    print("Binary candidate ".. bin_candidate.version.hash .." is not suitable.")
 
                     -- Collect installed packages purged from not suitable bin candidate and it's dependencies selected to be installed
                     local cleaned_installed = {}
@@ -173,7 +172,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
 
                 -- Binary candidate is compatible and suitable to be installed
                 elseif bin_candidate.version.hash == required_pkg_hash then
-                    log:info("Binary candidate ".. bin_candidate.version.hash .." is suitable.")
+                    print("Binary candidate ".. bin_candidate.version.hash .." is suitable.")
                     break
                 end
             end
