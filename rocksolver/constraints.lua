@@ -96,6 +96,7 @@ local version_mt = {
 
         if v1.revision and v2.revision then
             return (v1.revision < v2.revision)
+        end
 
         if not v1.revision and v2.revision then
             return true
@@ -348,7 +349,7 @@ function parse_major_minor_version(pkg_version)
     assert(type(pkg_version) == "table")
 
     local ver_tab = pkg_version[1]
-    return (ver_tab[1] or "0") .. "." .. (ver_tab[2] or "0")
+    return (ver_tab[1] or "0"), (ver_tab[2] or "0")
 end
 
 function splitVersionAndHash(version)
