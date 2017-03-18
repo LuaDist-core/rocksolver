@@ -3,6 +3,7 @@
 
 local DependencySolver = require "rocksolver.DependencySolver"
 local Package = require "rocksolver.Package"
+local ordered = require "ordered"
 
 -- Convert package list to string
 local function describe_packages(pkgs)
@@ -23,30 +24,30 @@ end
 
 -- Call dependency resolver - converts manifest and installed tables
 -- to the required format for ease of manual definition in the tests.
-local function get_dependencies(pkg, manifest, installed, platform)
+local function get_dependencies(pkg, manifests, installed, platform)
+    local manifest =  {repo_path = {}, packages = {}}
 
-    local function generate_manifest(manifest)
-        local modules = {}
-        for _, pkg in pairs(manifest) do
-            if not modules[pkg.name] then
-                modules[pkg.name] = {}
-            end
-            modules[pkg.name][pkg.version] = {
+    local function generate_manifest(manifests)
+        for _ ,current_manifest in pairs(manifests) do 
+            for _, pkg in pairs(current_manifest) do
+                if not manifest.packages[pkg.name] then
+                    manifest.packages[pkg.name] = ordered.Ordered()
+                end
+                manifest.packages[pkg.name][pkg.version] = {
                 dependencies = pkg.deps,
                 supported_platforms = type(pkg.platform) == "string" and {pkg.platform} or pkg.platform
-            }
-        end
-        return {
-            repo_path = repo_path,
-            packages = modules
-        }
+                }
+            end
+        end 
+            
+           return manifest
     end
 
     for k, v in pairs(installed) do
         installed[k] = Package(v.name, v.version, {dependencies = v.deps})
     end
 
-    local solver = DependencySolver(generate_manifest(manifest), platform or {"unix", "linux"})
+    local solver = DependencySolver(generate_manifest(manifests), platform or {"unix", "linux"})
     return solver:resolve_dependencies(pkg, installed)
 end
 
@@ -91,6 +92,7 @@ tests.depends_1 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b = {name = "b", version = "1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "b-1.0 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -102,6 +104,7 @@ tests.depends_2 = function()
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b = {name = "b", version = "1.0", deps = {"c"}}
     manifest.c = {name = "c", version = "1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "c-1.0 b-1.0 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -124,6 +127,7 @@ tests.depends_3 = function()
     manifest.j = {name = "j", version = "1.0", deps = {"k"}}
     manifest.k = {name = "k", version = "1.0"}
     manifest.l = {name = "l", version = "1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "b-1.0 f-1.0 l-1.0 g-1.0 c-1.0 h-1.0 i-1.0 e-1.0 k-1.0 j-1.0 d-1.0 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -137,6 +141,7 @@ tests.depends_circular_1 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b = {name = "b", version = "1.0", deps = {"a"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("circular"), pkgs_fail_msg(pkgs, err))
@@ -147,6 +152,7 @@ tests.depends_circular_2 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b = {name = "b", version = "1.0", deps = {"a"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("circular"), pkgs_fail_msg(pkgs, err))
@@ -161,6 +167,7 @@ tests.depends_circular_3 = function()
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b = {name = "b", version = "1.0", deps = {"c"}}
     manifest.c = {name = "c", version = "1.0", deps = {"a"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("circular"), pkgs_fail_msg(pkgs, err))
@@ -174,6 +181,7 @@ tests.depends_circular_4 = function()
     manifest.c = {name = "c", version = "1.0", deps = {"d"}}
     manifest.d = {name = "d", version = "1.0", deps = {"e"}}
     manifest.e = {name = "e", version = "1.0", deps = {"b"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("circular"), pkgs_fail_msg(pkgs, err))
@@ -189,6 +197,7 @@ tests.version_install_newest_1 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "1"}
     manifest.a2 = {name = "a", version = "2"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "a-2", pkgs_fail_msg(pkgs, err))
@@ -200,6 +209,7 @@ tests.version_install_newest_2 = function()
     manifest.a = {name = "a", version = "1.0", deps = {"b"}}
     manifest.b1 = {name = "b", version = "1"}
     manifest.b2 = {name = "b", version = "2"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "b-2 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -231,6 +241,7 @@ tests.version_install_newest_3 = function()
 
     manifest.h1 = {name = "h", version = "1alpha2"}
     manifest.h2 = {name = "h", version = "1work2"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "h-1alpha2 g-11.0 f-3.1rc e-3.1pre d-1rc3 c-2beta b-2.0 a-1", pkgs_fail_msg(pkgs, err))
@@ -250,6 +261,7 @@ tests.version_install_newest_4 = function()
 
     manifest.d1 = {name = "d", version = "2.1beta3"}
     manifest.d2 = {name = "d", version = "2.2alpha2"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "d-2.2alpha2 c-1.1rc2 b-1.2 a-2alpha", pkgs_fail_msg(pkgs, err))
@@ -274,6 +286,7 @@ tests.version_of_depends_1 = function()
     manifest.d3 = {name = "d", version = "3.3.1"}
     manifest.d4 = {name = "d", version = "3.3.2"}
     manifest.d5 = {name = "d", version = "3.4"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "d-3.3.2 c-2.1 b-1.0 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -295,6 +308,7 @@ tests.version_of_depends_2 = function()
     manifest.d3 = {name = "d", version = "4.4beta"}
     manifest.d4 = {name = "d", version = "4.4alpha"}
     manifest.d5 = {name = "d", version = "4.4"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "d-4.4alpha c-2.0.9 b-0.9 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -313,6 +327,7 @@ tests.version_of_depends_3 = function()
     manifest.c1 = {name = "c", version = "2.0.9"}
     manifest.c3 = {name = "c", version = "2.1.1"}
     manifest.c2 = {name = "c", version = "2.1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "c-2.1.0 b-1.3 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -327,6 +342,7 @@ tests.version_of_depends_4 = function()
     manifest.b2 = {name = "b", version = "2.0", deps = {"a >= 2.0"}}
 
     manifest.c = {name = "c", version = "1.0", deps = {"a ~> 1.0","b >= 1.0"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('c', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0 b-1.0 c-1.0", pkgs_fail_msg(pkgs, err))
@@ -340,6 +356,7 @@ tests.version_of_depends_5 = function()
     manifest.b = {name = "b", version = "1.0", deps = {"a == 1.0"}}
 
     manifest.c = {name = "c", version = "1.0", deps = {"a >= 1.0","b >= 1.0"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('c', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0 b-1.0 c-1.0", pkgs_fail_msg(pkgs, err))
@@ -351,6 +368,7 @@ tests.version_of_depends_8 = function()
     manifest.b = {name = "b", version = "1.0", deps = {"a 1.0"}}
 
     manifest.c = {name = "c", version = "1.0", deps = {"b 1.0"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('c', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0 b-1.0 c-1.0", pkgs_fail_msg(pkgs, err))
@@ -362,6 +380,7 @@ tests.version_of_depends_9 = function()
     manifest.b = {name = "b", version = "v1.0", deps = {"a = v1.0"}}
 
     manifest.c = {name = "c", version = "v1.0", deps = {"b = v1.0"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('c', manifest, installed)
     assert(describe_packages(pkgs) == "a-v1.0 b-v1.0 c-v1.0", pkgs_fail_msg(pkgs, err))
@@ -371,8 +390,9 @@ tests.version_of_depends_10 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "5.1"}
     manifest.a2 = {name = "a", version = "5.2.4"}
+    manifest = {manifest}
 
-    local pkgs, err = get_dependencies('a 5.2', manifest, installed)
+    local pkgs, err = get_dependencies('a = 5.2.4', manifest, installed)
     assert(describe_packages(pkgs) == "a-5.2.4", pkgs_fail_msg(pkgs, err))
 end
 
@@ -421,6 +441,7 @@ tests.version_of_installed_1 = function()
     manifest.a = {name = "a", version = "1.2"}
     manifest.b = {name = "b", version = "1.0", deps = {"a >= 1.2"}}
     installed.a = manifest.a
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('b', manifest, installed)
     assert(describe_packages(pkgs) == "b-1.0", pkgs_fail_msg(pkgs, err))
@@ -433,6 +454,7 @@ tests.version_of_installed_2 = function()
     manifest.a13 = {name = "a", version = "1.3"}
     manifest.b = {name = "b", version = "1.0", deps = {"a >= 1.2"}}
     installed.a12 = manifest.a12
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('b', manifest, installed)
     assert(describe_packages(pkgs) == "b-1.0", pkgs_fail_msg(pkgs, err))
@@ -444,6 +466,7 @@ tests.version_of_installed_3 = function()
     manifest.a = {name = "a", version = "1.2"}
     manifest.b = {name = "b", version = "1.0", deps = {"a >= 1.4"}}
     installed.a = manifest.a
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('b', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("but installed at version"), pkgs_fail_msg(pkgs, err))
@@ -456,6 +479,7 @@ tests.version_of_installed_4 = function()
     manifest.a13 = {name = "a", version = "1.3"}
     manifest.b = {name = "b", version = "1.0", deps = {"a >= 1.3"}}
     installed.a12 = manifest.a12
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('b', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("but installed at version"), pkgs_fail_msg(pkgs, err))
@@ -471,6 +495,7 @@ end
 tests.no_packages_to_install_1 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('x', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
@@ -480,6 +505,7 @@ end
 tests.no_packages_to_install_2 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {"x"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
@@ -490,6 +516,7 @@ tests.no_packages_to_install_3 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {"b > 1.0"}}
     manifest.b = {name = "b", version = "0.9"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
@@ -502,6 +529,7 @@ tests.no_packages_to_install_4 = function()
     manifest.b = {name = "b", version = "0.9"}
     installed.a = manifest.a
     installed.b = manifest.b
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "", pkgs_fail_msg(pkgs, err))
@@ -516,6 +544,7 @@ tests.installed_not_in_manifest_1 = function()
     local manifest, installed = {}, {}
     manifest.b = {name = "b", version = "0.9", deps = {"a"}}
     installed.a = {name = "a", version = "1.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('b', manifest, installed)
     assert(describe_packages(pkgs) == "b-0.9", pkgs_fail_msg(pkgs, err))
@@ -529,6 +558,7 @@ tests.platform_checks_1 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", platform = "win32"}
     manifest.b = {name = "b", version = "0.9", platform = "bsd"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
@@ -541,6 +571,7 @@ tests.platform_checks_2 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", platform = "!unix"}
     manifest.b = {name = "b", version = "0.9", platform = {"bsd", "win32", "darwin"}}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
@@ -555,6 +586,7 @@ tests.platform_checks_3 = function()
     manifest.a2 = {name = "a", version = "1.0"}
     manifest.b1 = {name = "b", version = "1.9", platform = "bsd"}
     manifest.b2 = {name = "b", version = "0.8"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0", pkgs_fail_msg(pkgs, err))
@@ -570,6 +602,7 @@ tests.os_specific_depends_1 = function()
     manifest.a = {name = "a", version = "1.0", deps = {platforms = {unix = {"b", "c"}}}}
     manifest.b = {name = "b", version = "0.9"}
     manifest.c = {name = "c", version = "0.9"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed, {"unix"})
     assert(describe_packages(pkgs) == "b-0.9 c-0.9 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -580,6 +613,7 @@ tests.os_specific_depends_2 = function()
     local manifest, installed = {}, {}
     manifest.a = {name = "a", version = "1.0", deps = {platforms = {win32 = {"b"}}}}
     manifest.b = {name = "b", version = "0.9"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0", pkgs_fail_msg(pkgs, err))
@@ -592,6 +626,7 @@ tests.os_specific_depends_3 = function()
     manifest.b = {name = "b", version = "0.9"}
     manifest.c = {name = "c", version = "0.9"}
     manifest.d = {name = "d", version = "0.9"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a', manifest, installed, {"unix"})
     assert(describe_packages(pkgs) == "c-0.9 d-0.9 b-0.9 a-1.0", pkgs_fail_msg(pkgs, err))
@@ -607,6 +642,7 @@ tests.install_specific_version_1 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "1.0"}
     manifest.a2 = {name = "a", version = "2.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a = 1.0', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0", pkgs_fail_msg(pkgs, err))
@@ -617,6 +653,7 @@ tests.install_specific_version_2 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "1.0"}
     manifest.a2 = {name = "a", version = "2.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a < 2.0', manifest, installed)
     assert(describe_packages(pkgs) == "a-1.0", pkgs_fail_msg(pkgs, err))
@@ -627,6 +664,7 @@ tests.install_specific_version_3 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "1.0"}
     manifest.a2 = {name = "a", version = "2.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a <= 2.0', manifest, installed)
     assert(describe_packages(pkgs) == "a-2.0", pkgs_fail_msg(pkgs, err))
@@ -637,11 +675,14 @@ tests.install_specific_version_4 = function()
     local manifest, installed = {}, {}
     manifest.a1 = {name = "a", version = "1.0"}
     manifest.a2 = {name = "a", version = "2.0"}
+    manifest = {manifest}
 
     local pkgs, err = get_dependencies('a >= 3.0', manifest, installed)
     assert(describe_packages(pkgs) == nil and err:find("No suitable candidate"), pkgs_fail_msg(pkgs, err))
 end
 
+
+--- ========== INSTALL BINARY PACKAGES =====================================
 
 
 -- actually run the test suite

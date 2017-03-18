@@ -6,8 +6,6 @@
 local const = require("rocksolver.constraints")
 local utils = require("rocksolver.utils")
 local Package = require("rocksolver.Package")
-local mgr = require "dist.manager"
-
 
 local DependencySolver = {}
 DependencySolver.__index = DependencySolver
@@ -142,7 +140,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
                 local bin_candidate = tmp_installed[#tmp_installed]
 
                 -- Generate hash from dependencies of binary candidate
-                local required_pkg_hash = mgr.generate_dep_hash(bin_candidate:dependencies(self.platform), tmp_installed)
+                local required_pkg_hash = utils.generate_dep_hash(self.platform, bin_candidate:dependencies(self.platform), tmp_installed)
 
                 -- If candidate contains hash (is binary package), but was built with other dependencies or on other platform
                 if bin_candidate.version.hash ~= required_pkg_hash then

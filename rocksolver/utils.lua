@@ -4,6 +4,8 @@
 -- License: MIT
 
 module("rocksolver.utils", package.seeall)
+local const = require("rocksolver.constraints")
+local md5 = require "md5"
 
 
 -- Given list of Packages and a repo path template string,
@@ -55,16 +57,45 @@ function load_manifest(manifest, is_local)
     return pkgs
 end
 
+-- Generates md5 hash for of binary package. Hashed string contains platform,which it was built on,names and binary compatible versions
+-- (major and minor) of installed dependencies of package. E.g. if package xy has dependencies 'lua' and 'luasocket',
+-- and they are installed in versions 'lua 5.2.4-1' and luasocket '3.0rc1-2' on unix platform, hashed string will
+-- look like this: 'unix lua 5.2 luasocket 3.0 '
+function generate_dep_hash(platform, pkg_dependencies, installed)
+    local dep_hash = platform[1] .. " "
+    local package_names = generate_bin_dependencies(pkg_dependencies, installed)
 
--- Returns a set-like table.
-function makeset(tbl)
-    local set = {}
-    for _, v in pairs(tbl) do
-        set[v] = true
+    for _, pkg_name in pairs(package_names) do
+        dep_hash = dep_hash .. pkg_name .. " "
     end
-    return set
+
+    dep_hash = md5.sumhexa(dep_hash)
+    dep_hash = dep_hash:sub(1,10)
+    return dep_hash
 end
 
+function generate_bin_dependencies(pkg_dependencies, installed)
+    local package_names = {}
+
+    for _, dependency in pairs(pkg_dependencies) do
+        local found = false
+        for _, installed_pkg in pairs(installed) do
+            if installed_pkg:matches(dependency) and not found then
+                local major, minor = const.parse_major_minor_version(installed_pkg.version)
+                local parsed_package_const = installed_pkg.name .. " " .. major .. "." .. minor
+                table.insert(package_names, parsed_package_const)
+                found = true
+            end
+        end
+        if not found then
+            print("Binary dependency "..dependency.." is not installed.")
+        end
+    end
+
+    table.sort(package_names)
+
+    return package_names
+end
 
 -- Returns an array of all the keys.
 function keys(tbl)
