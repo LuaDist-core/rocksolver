@@ -97,6 +97,15 @@ function generate_bin_dependencies(pkg_dependencies, installed)
     return package_names
 end
 
+-- Returns a set-like table.
+function makeset(tbl)
+    local set = {}
+    for _, v in pairs(tbl) do
+        set[v] = true
+    end
+    return set
+end
+
 -- Returns an array of all the keys.
 function keys(tbl)
     local keys = {}
