@@ -28,7 +28,7 @@ local function get_dependencies(pkg, manifests, installed, platform)
     local manifest =  {repo_path = {}, packages = {}}
 
     local function generate_manifest(manifests)
-        for _ ,current_manifest in pairs(manifests) do 
+        for _ ,current_manifest in pairs(manifests) do
             for _, pkg in pairs(current_manifest) do
                 if not manifest.packages[pkg.name] then
                     manifest.packages[pkg.name] = ordered.Ordered()
@@ -38,8 +38,8 @@ local function get_dependencies(pkg, manifests, installed, platform)
                 supported_platforms = type(pkg.platform) == "string" and {pkg.platform} or pkg.platform
                 }
             end
-        end 
-            
+        end
+
            return manifest
     end
 
@@ -684,6 +684,155 @@ end
 
 --- ========== INSTALL BINARY PACKAGES =====================================
 
+tests.install_binary_version_1 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0"}
+    bin_manifest.a = {name = "a", version = "1.0-0_5d4546a90e"}
+
+    table.insert(manifests,bin_manifest)
+    table.insert(manifests,src_manifest)
+
+    local pkgs, err = get_dependencies('a == 1.0-0', manifests, installed)
+
+    assert(describe_packages(pkgs) == "a-1.0-0_5d4546a90e", pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_1 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0"}
+    bin_manifest.a = {name = "a", version = "1.0-0_5d4546a90e",deps}
+
+    table.insert(manifests,src_manifest)
+    table.insert(manifests,bin_manifest)
+
+    local pkgs, err = get_dependencies('a == 1.0-0', manifests, installed)
+
+    assert(describe_packages(pkgs) == "a-1.0-0", pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_2 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0"}
+    bin_manifest.a = {name = "a", version = "1.0-0_5d4546a90e",  deps = {"b = 1.0-0"}}
+
+    table.insert(manifests, bin_manifest)
+    table.insert(manifests, src_manifest)
+
+    local pkgs, err = get_dependencies('a == 1.0-0', manifests, installed)
+
+    assert(describe_packages(pkgs) == "a-1.0-0", pkgs_fail_msg(pkgs, err))
+end
+
+
+tests.install_source_version_3 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.b = {name = "b", version = "1.0-0"}
+    installed.b =src_manifest.b
+
+    bin_manifest.a = {name = "a", version = "1.0-0_abc",  deps = {"b = 1.0-0"}}
+
+    table.insert(manifests, bin_manifest)
+    table.insert(manifests, src_manifest)
+
+    local pkgs, err = get_dependencies('a = 1.0-0', manifests, installed)
+    assert(describe_packages(pkgs) == nil, pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_4 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.b = {name = "b", version = "1.0-0"}
+    installed.b =src_manifest.b
+
+    bin_manifest.a = {name = "a", version = "1.0-0_13f91447e9",  deps = {"b = 1.0-0"}}
+
+    table.insert(manifests, bin_manifest)
+
+    local pkgs, err = get_dependencies('a = 1.0-0', manifests, installed)
+    assert(describe_packages(pkgs) == "a-1.0-0_13f91447e9", pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_5 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0"}
+    src_manifest.b = {name = "b", version = "1.0-0"}
+
+
+    bin_manifest.d = {name = "e", version = "1.0-1_2a3d20e692",  deps = {"a","c"}}
+    bin_manifest.e = {name = "e", version = "1.0-2_596a60ac84",deps= {"a","b"}}
+
+    table.insert(manifests, bin_manifest)
+    table.insert(manifests,src_manifest)
+
+    local pkgs, err = get_dependencies('e >= 1.0', manifests, installed)
+    assert(describe_packages(pkgs) == "a-1.0-0 b-1.0-0 e-1.0-2_596a60ac84", pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_6 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0", deps = {" b > 2.0-1"} }
+    src_manifest.b = {name = "b", version = "1.0-0"}
+    src_manifest.c = {name = "e", version = "1.0-0"}
+    src_manifest.d = {name = "f", version = "1.0-0"}
+
+    bin_manifest.e = {name = "g", version = "1.0-1_876c5705b7",  deps = {"e","f"}}
+    bin_manifest.f = {name = "g", version = "1.0-2_1952073eb5",deps= {"a"}}
+
+    table.insert(manifests, bin_manifest)
+    table.insert(manifests,src_manifest)
+
+    local pkgs, err = get_dependencies('g >= 1.0', manifests, installed)
+    assert(describe_packages(pkgs) == "e-1.0-0 f-1.0-0 g-1.0-1_876c5705b7", pkgs_fail_msg(pkgs, err))
+end
+
+tests.install_source_version_7 = function()
+    local src_manifest = {}
+    local bin_manifest = {}
+    local installed = {}
+    local manifests = {}
+
+    src_manifest.a = {name = "a", version = "1.0-0", deps = {"b"} }
+    src_manifest.b = {name = "b", version = "1.0-0", deps = {"j"} }
+    src_manifest.c = {name = "e", version = "1.0-0_a"}
+    src_manifest.c = {name = "e", version = "1.0-0"}
+    src_manifest.d = {name = "f", version = "1.0-0"}
+
+    bin_manifest.e = {name = "g", version = "1.0-1_876c5705b7",  deps = {"e","f"}}
+    bin_manifest.f = {name = "g", version = "1.0-2_1952073eb5",deps= {"a"}}
+
+    table.insert(manifests, bin_manifest)
+    table.insert(manifests,src_manifest)
+
+    local pkgs, err = get_dependencies('g >= 1.0', manifests, installed)
+    assert(describe_packages(pkgs) == "e-1.0-0 f-1.0-0 g-1.0-1_876c5705b7", pkgs_fail_msg(pkgs, err))
+end
 
 -- actually run the test suite
 run_tests(tests)

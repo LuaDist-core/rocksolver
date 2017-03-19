@@ -1,0 +1,16 @@
+{
+  {
+    a = {
+      version = "1.0-1_5d4546a90e",
+      name = "a",
+      platform = "unix"
+    }
+  },
+  {
+    a = {
+      version = "1.0-1",
+      name = "a",
+      platform = "unix"
+    }
+  }
+}
