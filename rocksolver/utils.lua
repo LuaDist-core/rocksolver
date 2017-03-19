@@ -69,6 +69,7 @@ function generate_dep_hash(platform, pkg_dependencies, installed)
         dep_hash = dep_hash .. pkg_name .. " "
     end
 
+    -- print(dep_hash)
     dep_hash = md5.sumhexa(dep_hash)
     dep_hash = dep_hash:sub(1,10)
     return dep_hash
@@ -88,13 +89,13 @@ function generate_bin_dependencies(pkg_dependencies, installed)
             end
         end
         if not found then
-            print("Binary dependency "..dependency.." is not installed.")
+            err = "Binary dependency "..dependency.." is not installed."
         end
     end
 
     table.sort(package_names)
 
-    return package_names
+    return package_names, err
 end
 
 -- Returns a set-like table.
@@ -152,7 +153,7 @@ end
 
 
 -- helper function for debug purposes
-local function table_tostring(tbl, label)
+function table_tostring(tbl, label)
     assert(type(tbl) == "table", "utils.table_tostring: Argument 'tbl' is not a table.")
     local str = ""
     for k,v in pairs(tbl) do
