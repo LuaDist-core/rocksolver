@@ -4,8 +4,6 @@
 local DependencySolver = require "rocksolver.DependencySolver"
 local Package = require "rocksolver.Package"
 local ordered = require "ordered"
-local pl = require "pl.import_into"()
-
 
 -- Convert package list to string
 local function describe_packages(pkgs)
@@ -15,7 +13,7 @@ local function describe_packages(pkgs)
 
     for k,v in ipairs(pkgs) do
         if k == 1 then
-            str = str .. v.name .. "-" .. tostring(v.version) 
+            str = str .. v.name .. "-" .. tostring(v.version)
         else
             str = str .. " " .. v.name .. "-" .. tostring(v.version)
         end
@@ -30,7 +28,7 @@ local function get_dependencies(pkg, manifests, installed, platform)
     local manifest =  {repo_path = {}, packages = {}}
 
     local function generate_manifest(manifests)
-        for _ ,current_manifest in pairs(manifests) do 
+        for _ ,current_manifest in pairs(manifests) do
             for _, pkg in pairs(current_manifest) do
                 if not manifest.packages[pkg.name] then
                     manifest.packages[pkg.name] = ordered.Ordered()
@@ -40,8 +38,8 @@ local function get_dependencies(pkg, manifests, installed, platform)
                 supported_platforms = type(pkg.platform) == "string" and {pkg.platform} or pkg.platform
                 }
             end
-        end 
-            
+        end
+
            return manifest
     end
 
@@ -748,7 +746,7 @@ tests.install_source_version_3 = function()
     installed.b =src_manifest.b
 
     bin_manifest.a = {name = "a", version = "1.0-0_abc",  deps = {"b = 1.0-0"}}
-    
+
     table.insert(manifests, bin_manifest)
     table.insert(manifests, src_manifest)
 
@@ -764,9 +762,9 @@ tests.install_source_version_4 = function()
 
     src_manifest.b = {name = "b", version = "1.0-0"}
     installed.b =src_manifest.b
-     
+
     bin_manifest.a = {name = "a", version = "1.0-0_13f91447e9",  deps = {"b = 1.0-0"}}
-    
+
     table.insert(manifests, bin_manifest)
 
     local pkgs, err = get_dependencies('a = 1.0-0', manifests, installed)
@@ -781,11 +779,11 @@ tests.install_source_version_5 = function()
 
     src_manifest.a = {name = "a", version = "1.0-0"}
     src_manifest.b = {name = "b", version = "1.0-0"}
-    
-     
+
+
     bin_manifest.d = {name = "e", version = "1.0-1_2a3d20e692",  deps = {"a","c"}}
     bin_manifest.e = {name = "e", version = "1.0-2_596a60ac84",deps= {"a","b"}}
-    
+
     table.insert(manifests, bin_manifest)
     table.insert(manifests,src_manifest)
 
@@ -835,7 +833,6 @@ tests.install_source_version_7 = function()
     local pkgs, err = get_dependencies('g >= 1.0', manifests, installed)
     assert(describe_packages(pkgs) == "e-1.0-0 f-1.0-0 g-1.0-1_876c5705b7", pkgs_fail_msg(pkgs, err))
 end
--- actually run the test suite
-run_tests(tests)
+
 -- actually run the test suite
 run_tests(tests)
