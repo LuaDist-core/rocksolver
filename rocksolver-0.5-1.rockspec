@@ -1,11 +1,11 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "rocksolver"
-version = "0.5-2"
+version = "0.5-1"
 -- LuaDist source
 source = {
   url = "git://github.com/LuaDist-core/rocksolver.git",
-  tag = "0.5-2"
+  tag = "0.5-1"
 }
 -- Original source
 -- source = {
