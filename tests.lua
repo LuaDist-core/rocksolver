@@ -392,7 +392,7 @@ tests.version_of_depends_10 = function()
     manifest.a2 = {name = "a", version = "5.2.4"}
     manifest = {manifest}
 
-    local pkgs, err = get_dependencies('a = 5.2.4', manifest, installed)
+    local pkgs, err = get_dependencies('a ~> 5.2', manifest, installed)
     assert(describe_packages(pkgs) == "a-5.2.4", pkgs_fail_msg(pkgs, err))
 end
 
@@ -684,6 +684,7 @@ end
 
 --- ========== INSTALL BINARY PACKAGES =====================================
 
+-- binary a-1.0-0 available, source a-1.0-0. bin_manifest is first, so bin pkg should be installed
 tests.install_binary_version_1 = function()
     local src_manifest = {}
     local bin_manifest = {}
@@ -701,6 +702,7 @@ tests.install_binary_version_1 = function()
     assert(describe_packages(pkgs) == "a-1.0-0_5d4546a90e", pkgs_fail_msg(pkgs, err))
 end
 
+-- binary a-1.0-0 available, source a-1.0-0. src_manifest is first, so src pkg should be installed
 tests.install_source_version_1 = function()
     local src_manifest = {}
     local bin_manifest = {}
@@ -718,6 +720,8 @@ tests.install_source_version_1 = function()
     assert(describe_packages(pkgs) == "a-1.0-0", pkgs_fail_msg(pkgs, err))
 end
 
+-- binary a-1.0-0 available, source a-1.0-0. bin_manifest is first, but dependecy isn't satisfied,
+-- so src pkg is installed
 tests.install_source_version_2 = function()
     local src_manifest = {}
     local bin_manifest = {}
@@ -735,8 +739,8 @@ tests.install_source_version_2 = function()
     assert(describe_packages(pkgs) == "a-1.0-0", pkgs_fail_msg(pkgs, err))
 end
 
-
-tests.install_source_version_3 = function()
+-- binary a-1.0-0 with src dependency b-1.0-0 available. bin_manifest is first. hash isn't correct, so no pkg installed
+tests.install_bad_hash_1 = function()
     local src_manifest = {}
     local bin_manifest = {}
     local installed = {}
@@ -754,16 +758,17 @@ tests.install_source_version_3 = function()
     assert(describe_packages(pkgs) == nil, pkgs_fail_msg(pkgs, err))
 end
 
-tests.install_source_version_4 = function()
+-- binary a 1.0-0 available with dependecy b ~> 1.0-0. suitable b package already installed 
+tests.install_suitable_hash_with_dep_1 = function()
     local src_manifest = {}
     local bin_manifest = {}
     local installed = {}
     local manifests = {}
 
-    src_manifest.b = {name = "b", version = "1.0-0"}
+    src_manifest.b = {name = "b", version = "1.0-7"}
     installed.b =src_manifest.b
 
-    bin_manifest.a = {name = "a", version = "1.0-0_13f91447e9",  deps = {"b = 1.0-0"}}
+    bin_manifest.a = {name = "a", version = "1.0-0_13f91447e9",  deps = {"b ~> 1.0"}}
 
     table.insert(manifests, bin_manifest)
 
@@ -771,7 +776,8 @@ tests.install_source_version_4 = function()
     assert(describe_packages(pkgs) == "a-1.0-0_13f91447e9", pkgs_fail_msg(pkgs, err))
 end
 
-tests.install_source_version_5 = function()
+-- two suitable binaries with correct hashes available. one has unsatisfied dependencies, so another is selected 
+tests.install_binary_version_2 = function()
     local src_manifest = {}
     local bin_manifest = {}
     local installed = {}
@@ -791,13 +797,15 @@ tests.install_source_version_5 = function()
     assert(describe_packages(pkgs) == "a-1.0-0 b-1.0-0 e-1.0-2_596a60ac84", pkgs_fail_msg(pkgs, err))
 end
 
-tests.install_source_version_6 = function()
+-- two suitable binaries with correct hashes available. both have satisfied dependencies, but one's 
+-- dependency deps aren't satisfied,so another is selected  
+tests.install_binary_version_3 = function()
     local src_manifest = {}
     local bin_manifest = {}
     local installed = {}
     local manifests = {}
 
-    src_manifest.a = {name = "a", version = "1.0-0", deps = {" b > 2.0-1"} }
+    src_manifest.a = {name = "a", version = "1.0-0", deps = {" b ~> 2.0"} }
     src_manifest.b = {name = "b", version = "1.0-0"}
     src_manifest.c = {name = "e", version = "1.0-0"}
     src_manifest.d = {name = "f", version = "1.0-0"}
@@ -811,8 +819,8 @@ tests.install_source_version_6 = function()
     local pkgs, err = get_dependencies('g >= 1.0', manifests, installed)
     assert(describe_packages(pkgs) == "e-1.0-0 f-1.0-0 g-1.0-1_876c5705b7", pkgs_fail_msg(pkgs, err))
 end
-
-tests.install_source_version_7 = function()
+-- two suitable binaries available, all dependencies available, one depencency has wrong hash, but src version is available
+tests.install_binary_version_7 = function()
     local src_manifest = {}
     local bin_manifest = {}
     local installed = {}
