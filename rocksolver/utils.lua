@@ -78,6 +78,10 @@ end
 function generate_bin_dependencies(pkg_dependencies, installed)
     local package_names = {}
 
+    if not pkg_dependencies then
+        return {}
+    end
+
     for _, dependency in pairs(pkg_dependencies) do
         local found = false
         for _, installed_pkg in pairs(installed) do
@@ -90,6 +94,7 @@ function generate_bin_dependencies(pkg_dependencies, installed)
         end
         if not found then
             err = "Binary dependency "..dependency.." is not installed."
+            return dependency, err
         end
     end
 
