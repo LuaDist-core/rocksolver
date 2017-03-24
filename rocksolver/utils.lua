@@ -93,8 +93,8 @@ function generate_bin_dependencies(pkg_dependencies, installed)
             end
         end
         if not found then
-            err = "Binary dependency "..dependency.." is not installed."
-            return dependency, err
+          err = "Binary dependencies are not correct, probably incorrect rockspec file or manifest record."
+          return dependency, err
         end
     end
 
