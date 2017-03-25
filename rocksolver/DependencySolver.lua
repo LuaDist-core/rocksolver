@@ -61,7 +61,16 @@ function DependencySolver:find_candidates(package)
     if not self.manifest.packages[pkg_name] then return {} end
 
     local found = {}
-    for version, spec in utils.sort(self.manifest.packages[pkg_name], const.compareVersions) do
+    local order = 1
+    local temp_pkg_cand = {}
+
+    for version , deps in pairs(self.manifest.packages[pkg_name]) do
+        version = order .. " ".. version
+        temp_pkg_cand[version] = deps
+        order = order + 1
+    end
+
+    for version, spec in utils.sort(temp_pkg_cand, const.compareVersions) do
         local pkg = Package(pkg_name, version, spec)
         if pkg:matches(package) and pkg:supports_platform(self.platform) then
             table.insert(found, pkg)
@@ -187,7 +196,7 @@ function DependencySolver:resolve_dependencies(package, installed, dependency_pa
         if pkg.version.hash then
             local required_pkg_hash = utils.generate_dep_hash(self.platform, pkg:dependencies(self.platform), tmp_installed)
             if pkg.version.hash ~= required_pkg_hash then
-                err = "Binary candidate is not suitable."
+                err = "No suitable candidate for package \"" .. package .. "\" found."
             end
         end
 
