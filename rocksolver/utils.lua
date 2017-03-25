@@ -82,6 +82,8 @@ function generate_bin_dependencies(pkg_dependencies, installed)
         return {}
     end
 
+    if type(pkg_dependencies) == "string" then pkg_dependencies = {pkg_dependencies} end
+
     for _, dependency in pairs(pkg_dependencies) do
         local found = false
         for _, installed_pkg in pairs(installed) do
@@ -94,7 +96,6 @@ function generate_bin_dependencies(pkg_dependencies, installed)
         end
         if not found then
           err = "Binary dependencies are not correct, probably incorrect rockspec file or manifest record."
-          return dependency, err
         end
     end
 
