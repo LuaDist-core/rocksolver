@@ -95,7 +95,7 @@ local version_mt = {
         end
 
         if v1.revision and v2.revision then
-            if v1.revision == v2.revision then
+            if v1.revision == v2.revision and v1.order and v2.order then
                 return (v1.order > v2.order)
             end
 
@@ -157,18 +157,19 @@ function parseVersion(vstring)
         vstring = vstring:match("^%s*(.*)%s*$")
         version.string = vstring
         -- store revision separately if any
-        local main,revision,order, hash = vstring:match("(.*)%-(%d+)%#+(%d+)%_*(%x*)$")
+        local main,revision, order, hash = vstring:match("(.*)%-(%d+)%#*(%d*)%_*(%x*)$")
 
-        version.order = tonumber(order)
-        version.string = version.string:gsub("%#(%d+)","")
+        if order then version.order = tonumber(order) end
 
         if revision then
             vstring = main
             version.revision = tonumber(revision)
         end
+
         if hash and hash ~= "" then
             version.hash = hash
         end
+        
         local number
         while #vstring > 0 do
             -- extract a number
