@@ -65,12 +65,16 @@ function DependencySolver:find_candidates(package)
     local temp_pkg_cand = {}
 
     for version , deps in pairs(self.manifest.packages[pkg_name]) do
-        version = order .. " ".. version
+        version,hash = const.splitVersionAndHash(version)
+        version = version.."#"..order
+        if hash then version = version.."_".. hash end
+
         temp_pkg_cand[version] = deps
         order = order + 1
     end
 
     for version, spec in utils.sort(temp_pkg_cand, const.compareVersions) do
+        version = version:gsub("%#(%d+)","")
         local pkg = Package(pkg_name, version, spec)
         if pkg:matches(package) and pkg:supports_platform(self.platform) then
             table.insert(found, pkg)
