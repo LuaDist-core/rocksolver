@@ -94,14 +94,10 @@ function generate_bin_dependencies(pkg_dependencies, installed)
                 found = true
             end
         end
-        if not found then
-          err = "Binary dependencies are not correct, probably incorrect rockspec file or manifest record."
-        end
     end
 
     table.sort(package_names)
-
-    return package_names, err
+    return package_names
 end
 
 -- Returns a set-like table.
