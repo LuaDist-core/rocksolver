@@ -169,7 +169,7 @@ function parseVersion(vstring)
         if hash and hash ~= "" then
             version.hash = hash
         end
-        
+
         local number
         while #vstring > 0 do
             -- extract a number
