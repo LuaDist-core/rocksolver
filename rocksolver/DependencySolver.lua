@@ -75,6 +75,7 @@ function DependencySolver:find_candidates(package)
 
     for version, spec in utils.sort(temp_pkg_cand, const.compareVersions) do
         version = version:gsub("%#(%d+)","")
+
         local pkg = Package(pkg_name, version, spec)
         if pkg:matches(package) and pkg:supports_platform(self.platform) then
             table.insert(found, pkg)
